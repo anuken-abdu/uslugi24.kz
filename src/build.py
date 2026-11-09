@@ -154,14 +154,22 @@ def nav_html():
 <div class="nav-m">{btns(MSG, True)}</div></nav>'''
 
 def gtag():
-    """Единый тег Google — сразу после <head>. Пока клиент не прислал ID, тег не выводится."""
+    """Теги Google — в <head> каждой страницы, как в инструкции Google: сначала тег Google (GTM), сразу после него — фрагмент события конверсии."""
     if not TAG_ID: return ""
-    if TAG_ID.startswith("GTM-"):
-        return (f'<script async src="https://www.googletagmanager.com/gtm.js?id={TAG_ID}"></script>\n'
-                "<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag('js', new Date());\n</script>\n")
-    src = f"https://www.googletagmanager.com/gtag/js?id={TAG_ID}"
-    return (f'<script async src="{src}"></script>\n'
-            f"<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){{dataLayer.push(arguments);}}\n  gtag('js', new Date());\n  gtag('config', '{TAG_ID}');\n</script>\n")
+    out = (f'<script async src="https://www.googletagmanager.com/gtm.js?id={TAG_ID}"></script>\n'
+           "<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag('js', new Date());\n</script>\n")
+    if GADS_ID and GADS_CALL_LABEL:
+        out += ("<!-- Event snippet for Контакт conversion page\nIn your html page, add the snippet and call gtag_report_conversion when\nsomeone clicks on the chosen link or button. -->\n"
+                "<script>\nfunction gtag_report_conversion(url) {\n  var done = false;\n  var callback = function () {\n    if (done) return; done = true;\n"
+                "    if (typeof(url) != 'undefined') {\n      window.location = url;\n    }\n  };\n  setTimeout(callback, 800); // звонок откроется, даже если тег Google заблокирован\n  gtag('event', 'conversion', {\n"
+                f"      'send_to': '{GADS_ID}/{GADS_CALL_LABEL}',\n      'value': 1.0,\n      'currency': 'USD',\n      'event_callback': callback\n  }});\n  return false;\n}}\n</script>\n")
+    return out
+
+def conv_links(doc):
+    """Вызов gtag_report_conversion при нажатии на телефон и WhatsApp (по инструкции Google)."""
+    if not (GADS_ID and GADS_CALL_LABEL): return doc
+    doc = re.sub(r'<a ([^>]*?)href="(tel:[^"]+)"', lambda m: f'<a {m.group(1)}href="{m.group(2)}" onclick="return gtag_report_conversion(&#39;{m.group(2)}&#39;)"', doc)
+    return re.sub(r'<a ([^>]*?)href="(https://wa\.me/[^"]+)"', lambda m: f'<a {m.group(1)}href="{m.group(2)}" onclick="gtag_report_conversion()"', doc)
 
 CSS = (Path(__file__).parent / "fonts.css").read_text(encoding="utf-8") + (Path(__file__).parent / "styles.css").read_text(encoding="utf-8")
 CSS = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S); CSS = re.sub(r"\s*\n\s*", "", CSS); CSS = re.sub(r"\s*([{};:,>])\s*", r"\1", CSS).replace(";}", "}")
@@ -174,13 +182,13 @@ def page(path, title, desc, body, schemas=(), crumbs=None, prio="0.7"):
         items = [("Главная", "/")] + crumbs
         bc = [{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": n, "item": SITE_URL + u} for i, (n, u) in enumerate(items)]}]
     ld = "".join(f'<script type="application/ld+json">{json.dumps(s, ensure_ascii=False)}</script>' for s in [{"@context": "https://schema.org", **ORG}, *schemas, *bc])
-    cfg = json.dumps({"ga": GA_ID, "ads": GADS_ID, "call": GADS_CALL_LABEL, "wa": GADS_WA_LABEL, "wan": WA_NUMBER}, ensure_ascii=False)
+    cfg = json.dumps({"ga": GA_ID, "wan": WA_NUMBER}, ensure_ascii=False)
     foot_cats = "".join(f'<div><h3>{E(c["name"])}</h3><ul>' + "".join(f'<li><a href="{wurl(w)}">{E(w["name"])}</a></li>' for w in BY_CAT[c["slug"]][:6]) + "</ul></div>" for c in CATS)
     doc = f'''<!doctype html>
 <html lang="ru">
 <head>
-{gtag()}<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta charset="utf-8">
+{gtag()}<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>{E(title)}</title>
 <meta name="description" content="{E(desc)}">
 <link rel="canonical" href="{SITE_URL}{path}">
@@ -221,7 +229,7 @@ def page(path, title, desc, body, schemas=(), crumbs=None, prio="0.7"):
 <script src="/assets/app.js?v={VER}" defer></script>
 </body></html>'''
     out = DIST / "404.html" if path == "/404" else DIST / path.strip("/") / "index.html"
-    out.parent.mkdir(parents=True, exist_ok=True); out.write_text(doc, encoding="utf-8")
+    out.parent.mkdir(parents=True, exist_ok=True); out.write_text(conv_links(doc), encoding="utf-8")
 
 # ---------------------------------------------------------------- страницы
 HERO_TILES = [("dresser", "Шкафы", "sborka-shkafa"), ("drop", "Смесители", "ustanovka-smesitelya"), ("television", "Телевизоры", "naveska-televizora"),

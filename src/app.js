@@ -9,16 +9,16 @@
   /* ---------- конверсии Google Ads / GA4 ---------- */
   function conv(kind) {
     if (typeof window.gtag !== "function") return;
-    var label = kind === "call" ? CFG.call : CFG.wa;
-    if (CFG.ads && label) window.gtag("event", "conversion", { send_to: CFG.ads + "/" + label, value: 1.0, currency: "USD", transport_type: "beacon" });
     if (CFG.ga) window.gtag("event", kind === "call" ? "phone_click" : "whatsapp_click", { page_path: location.pathname, transport_type: "beacon" });
   }
+  /* ссылки, созданные чатом и формой на лету (без onclick в HTML), тоже засчитываются как конверсия «Контакт» */
   document.addEventListener("click", function (e) {
     var a = e.target.closest("a");
     if (!a) return;
-    var h = a.getAttribute("href") || "";
-    if (h.indexOf("tel:") === 0) conv("call");
-    else if (h.indexOf("wa.me") > -1) conv("wa");
+    var h = a.getAttribute("href") || "", isTel = h.indexOf("tel:") === 0, isWa = h.indexOf("wa.me") > -1;
+    if (!isTel && !isWa) return;
+    conv(isTel ? "call" : "wa");
+    if (!a.hasAttribute("onclick") && typeof window.gtag_report_conversion === "function") window.gtag_report_conversion();
   });
 
   /* ---------- меню ---------- */
@@ -63,6 +63,7 @@
         (f.elements.name.value.trim() ? "\nИмя: " + f.elements.name.value.trim() : "") + "\nТелефон: " + ph;
       if (typeof window.gtag === "function") window.gtag("set", "user_data", { phone_number: e164(ph) });
       conv("wa");
+      if (typeof window.gtag_report_conversion === "function") window.gtag_report_conversion();
       if (typeof window.gtag === "function" && CFG.ga) window.gtag("event", "generate_lead", { method: "form", transport_type: "beacon" });
       window.open(waUrl(t), "_blank", "noopener");
     });

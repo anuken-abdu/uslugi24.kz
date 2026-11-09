@@ -10,8 +10,11 @@ PHONE_DISPLAY = "+7 702 891 02 57"
 PHONE_TEL = "+77028910257"
 WA_NUMBER = "77028910257"
 ADDRESS = "ул. Туркестан, 10"
-TAG_ID = ""            # единый тег Google (GTM-… или G-…/AW-…): пришлёт клиент
-GA_ID = ""; GADS_ID = ""; GADS_CALL_LABEL = ""; GADS_WA_LABEL = ""
+TAG_ID = "GTM-59Z2NJSW"          # единый тег Google (GTM-… или G-…/AW-…): пришлёт клиент
+GA_ID = ""
+GADS_ID = "AW-18562494108"              # Google Ads
+GADS_CALL_LABEL = "nGbzCNWRlLUdEJzdpJNF"   # конверсия «Контакт» (клик): звонок и WhatsApp
+GADS_WA_LABEL = ""
 DEV = ("Anuken.kz", "https://www.anuken.kz")
 
 # Подтверждённые преимущества (со старого сайта). Тексты короткие — в одну строку.
