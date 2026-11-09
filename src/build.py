@@ -34,7 +34,7 @@ def ui(n, cls="ui"): return f'<svg class="{cls}" viewBox="0 0 24 24" aria-hidden
 
 MSG = "Здравствуйте! Нужен мастер в Астане."
 def logo(dark=False):
-    return (f'<a class="logo{" logo-d" if dark else ""}" href="/"><img src="/assets/logo-mark.svg" alt="" width="44" height="44">'
+    return (f'<a class="logo{" logo-d" if dark else ""}" href="/"><img src="/assets/logo-mark{"-d" if dark else ""}.svg" alt="" width="44" height="44">'
             f'<span class="logo-t">Услуги<i>24</i></span></a>')
 
 def btns(msg=MSG, dark=False):
